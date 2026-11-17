@@ -1,0 +1,14 @@
+---------------------------------------------------------------------------------------------
+| ID  | PRODUTO              | CATEGORIA        | PREÇO (R$) | QUANTIDADE | FORNECEDOR      |
+---------------------------------------------------------------------------------------------
+| 1   | ARROZ TIPO 1 5KG     | ALIMENTOS        |      29.90 |         50 | GRÃOS DO SUL    |
+| 2   | FEIJÃO CARIOCA 1KG   | ALIMENTOS        |       8.50 |         80 | FAZENDA BOA     |
+| 3   | TECLADO MECÂNICO     | INFORMÁTICA      |     189.90 |         12 | TECNOSHOP       |
+| 4   | FONE BLUETOOTH       | INFORMÁTICA      |      99.00 |         20 | SOMPLUS         |
+| 5   | SABONETE NEUTRO      | HIGIENE PESSOAL  |       3.20 |        100 | BELEZA PURA     |
+| 6   | CALÇA JEANS          | VESTUÁRIO        |     129.90 |         18 | MODA BRASIL     |
+| 7   | TÊNIS ESPORTIVO      | VESTUÁRIO        |     249.90 |         10 | CORRE SPORTS    |
+| 8   | DETERGENTE 500ML     | LIMPEZA          |       2.99 |         60 | LIMPA JÁ        |
+| 9   | CADEIRA GAMER        | MÓVEIS           |     799.00 |          5 | CONFORTO MAX    |
+| 10  | CHOCOLATE 90G        | ALIMENTOS        |       7.50 |        120 | DOCE VIDA       |
+---------------------------------------------------------------------------------------------
