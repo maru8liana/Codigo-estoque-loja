@@ -1,112 +1,131 @@
-#include <stdio.h>   
-#include <stdlib.h>
-#include <string.h> 
-#include <ctype.h> 
+/*
+ * ATIVIDADE AVALIATIVA 04 - Cadastro de Loja
+ * Une: ordenacao (Bubble Sort) + arquivos + struct + ponteiros + switch
+ *
+ * Arquivo de dados: produtos.txt, escrito como a propria tabela de texto:
+ *   | ID | Produto | Categoria | Preço (R$) | Quantidade | Fornecedor |
+ * Os produtos NAO ficam no codigo: o programa puxa a lista desse arquivo separado
+ * (que deve estar na mesma pasta) ao iniciar (tambem aceita linhas no formato
+ * ID;Produto;Categoria;Preco;Quantidade;Fornecedor) e regrava no mesmo formato.
+ */
 
-#define ARQ "produtos.txt" 
-#define TMP "temp.txt"      
-#define CSV "produtos.csv"  
-#define MAX 500         
+#include <stdio.h>   // printf, fopen, fgets, fprintf, remove, rename...
+#include <stdlib.h>  // strtod
+#include <string.h>  // strlen, strcmp, strcpy, strstr, strcspn...
+#include <ctype.h>   // isspace, isdigit
 
+#define ARQ "produtos.txt"   // arquivo principal com os dados
+#define TMP "temp.txt"       // arquivo temporario (alterar/excluir)
+#define CSV "produtos.csv"   // arquivo de exportacao CSV
+#define MAX 500              // maximo de produtos no vetor
 
+// Estrutura que representa um produto da loja
 typedef struct {
-    int id;               
-    char produto[50];     
-    char categoria[30];   
-    float preco;         
-    int quantidade;      
-    char fornecedor[40];  
+    int id;               // identificador unico (gerado automaticamente)
+    char produto[50];     // nome do produto (aumente se precisar de textos maiores)
+    char categoria[30];   // categoria do produto
+    float preco;          // preco em reais
+    int quantidade;       // quantidade em estoque
+    char fornecedor[40];  // nome do fornecedor
 } Produto;
 
+/* ===================== FUNCOES AUXILIARES DE ENTRADA ===================== */
 
+// Le um texto do teclado com fgets (aceita espacos) e guarda em dest
 void lerTexto(const char *msg, char *dest, int tam) {
-    char buf[256];                                  
-    printf("%s", msg);                              
-    if (fgets(buf, sizeof(buf), stdin) == NULL) {   
-        dest[0] = '\0';                             
-        return;                                    
+    char buf[256];                                  // buffer temporario maior que o destino
+    printf("%s", msg);                              // mostra a mensagem ao usuario
+    if (fgets(buf, sizeof(buf), stdin) == NULL) {   // le a linha digitada
+        dest[0] = '\0';                             // se falhar (EOF), devolve texto vazio
+        return;                                     // sai da funcao
     }
-    buf[strcspn(buf, "\r\n")] = '\0';               
-    for (char *p = buf; *p; p++) {                 
-        if (*p == ';' || *p == '|') *p = ',';       
+    buf[strcspn(buf, "\r\n")] = '\0';               // remove o '\n' do final
+    for (char *p = buf; *p; p++) {                  // percorre o texto com ponteiro
+        if (*p == ';' || *p == '|') *p = ',';       // ';' e '|' sao separadores do arquivo, entao troca
     }
-    strncpy(dest, buf, tam - 1);                    
-    dest[tam - 1] = '\0';                           
+    strncpy(dest, buf, tam - 1);                    // copia respeitando o tamanho do campo
+    dest[tam - 1] = '\0';                           // garante o terminador de string
 }
 
+// Le um inteiro validando a entrada
 int lerInt(const char *msg) {
-    char buf[64];                                   
-    int x;                                       
-    while (1) {                                     
-        printf("%s", msg);                          
-        if (fgets(buf, sizeof(buf), stdin) == NULL) 
-            return 0;                              
-        if (sscanf(buf, "%d", &x) == 1)             
-            return x;                               
-        printf("Valor invalido.\n");                
+    char buf[64];                                   // buffer da linha
+    int x;                                          // valor lido
+    while (1) {                                     // repete ate o usuario digitar certo
+        printf("%s", msg);                          // mostra a mensagem
+        if (fgets(buf, sizeof(buf), stdin) == NULL) // se acabar a entrada (EOF)...
+            return 0;                               // ...devolve 0 (sai do menu)
+        if (sscanf(buf, "%d", &x) == 1)             // tenta converter para inteiro
+            return x;                               // deu certo: devolve
+        printf("Valor invalido.\n");                // senao, avisa e repete
     }
 }
 
-
+// Le um preco (aceita virgula ou ponto como separador decimal)
 float lerFloat(const char *msg) {
-    char buf[64];                                   
-    char *fim;                                      
-    double v;                                       
+    char buf[64];                                   // buffer da linha
+    char *fim;                                      // aponta onde a conversao parou
+    double v;                                       // valor convertido
     while (1) {
         printf("%s", msg);
         if (fgets(buf, sizeof(buf), stdin) == NULL)
             return 0;
-        for (char *p = buf; *p; p++)                
+        for (char *p = buf; *p; p++)                // troca virgula por ponto
             if (*p == ',') *p = '.';
-        v = strtod(buf, &fim);                      
-        if (fim != buf && v >= 0)                   
+        v = strtod(buf, &fim);                      // converte texto em numero
+        if (fim != buf && v >= 0)                   // converteu algo e nao e negativo
             return (float)v;
         printf("Valor invalido.\n");
     }
 }
 
-
+// Retorna 1 se 'texto' contem 'busca' (os dados sao todos em MAIUSCULAS)
 int contemTexto(const char *texto, const char *busca) {
-    return strstr(texto, busca) != NULL;            
+    return strstr(texto, busca) != NULL;            // strstr procura substring
 }
 
+// Retorna 1 se os dois textos sao iguais
 int iguais(const char *a, const char *b) {
-    return strcmp(a, b) == 0;                       
+    return strcmp(a, b) == 0;                       // strcmp devolve 0 se iguais
 }
 
+/* ======================== FUNCOES DE ARQUIVO ============================= */
 
-
+// Remove espacos do inicio e do fim de um texto (modifica o proprio texto)
 void trim(char *s) {
-    int ini = 0;                                    
-    int fim = (int)strlen(s);                       
-    while (s[ini] != '\0' && isspace((unsigned char)s[ini])) ini++;   
-    while (fim > ini && isspace((unsigned char)s[fim - 1])) fim--;   
-    memmove(s, s + ini, fim - ini);                 
-    s[fim - ini] = '\0';                            
+    int ini = 0;                                    // primeira posicao nao vazia
+    int fim = (int)strlen(s);                       // fim do texto
+    while (s[ini] != '\0' && isspace((unsigned char)s[ini])) ini++;   // pula espacos iniciais
+    while (fim > ini && isspace((unsigned char)s[fim - 1])) fim--;    // ignora espacos finais
+    memmove(s, s + ini, fim - ini);                 // desloca o texto util para o comeco
+    s[fim - ini] = '\0';                            // fecha a string
 }
 
+// Copia 'orig' para 'dest' respeitando o tamanho 'tam' do campo
 void copiar(char *dest, const char *orig, int tam) {
-    strncpy(dest, orig, tam - 1);                   
-    dest[tam - 1] = '\0';                           
+    strncpy(dest, orig, tam - 1);                   // copia no maximo tam-1 caracteres
+    dest[tam - 1] = '\0';                           // garante o terminador
 }
 
-
+// Converte UMA linha do arquivo em um Produto. Retorna 1 se for uma linha valida.
+// Aceita o formato de tabela "| 1 | Nome | Cat | 49.90 | 30 | Forn |"
+// e o formato "1;Nome;Cat;49.90;30;Forn". Linhas de separador/cabecalho sao ignoradas.
 int lerLinha(const char *linha, Produto *p) {
-    if (strchr(linha, '|') != NULL) {               
-        char copia[300];                            
-        char campos[6][60];                        
-        int qtd = 0;                                
+    if (strchr(linha, '|') != NULL) {               // formato de tabela
+        char copia[300];                            // strtok altera o texto, entao usa copia
+        char campos[6][60];                         // os 6 campos da linha
+        int qtd = 0;                                // quantos campos foram lidos
         copiar(copia, linha, sizeof(copia));
-        char *tok = strtok(copia, "|\r\n");         
+        char *tok = strtok(copia, "|\r\n");         // separa o texto pelos '|'
         while (tok != NULL && qtd < 6) {
             copiar(campos[qtd], tok, sizeof(campos[qtd]));
-            trim(campos[qtd]);                      
+            trim(campos[qtd]);                      // tira espacos ao redor
             qtd++;
-            tok = strtok(NULL, "|\r\n");            
+            tok = strtok(NULL, "|\r\n");            // proximo campo
         }
-        if (qtd < 6 || !isdigit((unsigned char)campos[0][0]))  
+        if (qtd < 6 || !isdigit((unsigned char)campos[0][0]))   // cabecalho ("ID") ou linha incompleta
             return 0;
-        for (char *c = campos[3]; *c; c++)         
+        for (char *c = campos[3]; *c; c++)          // aceita virgula no preco
             if (*c == ',') *c = '.';
         p->id = atoi(campos[0]);                    // ID
         copiar(p->produto, campos[1], sizeof(p->produto));
@@ -116,12 +135,13 @@ int lerLinha(const char *linha, Produto *p) {
         copiar(p->fornecedor, campos[5], sizeof(p->fornecedor));
         return 1;
     }
+    // formato com ';'  (%49[^;] le ate o proximo ';', no maximo 49 caracteres)
     return sscanf(linha, "%d;%49[^;];%29[^;];%f;%d;%39[^\r\n]",
                   &p->id, p->produto, p->categoria,
                   &p->preco, &p->quantidade, p->fornecedor) == 6;
 }
 
-
+// Carrega o arquivo produtos.txt para o vetor 'lista' e devolve a quantidade
 int carregar(Produto *lista) {
     FILE *f = fopen(ARQ, "r");                      // abre para leitura
     char linha[300];                                // guarda cada linha lida
@@ -136,7 +156,8 @@ int carregar(Produto *lista) {
     return n;
 }
 
-
+// Escreve um texto em 'f' ocupando 'larg' CARACTERES (nao bytes), para que
+// letras acentuadas (2 bytes em UTF-8) nao desalinhem a tabela
 void campo(FILE *f, const char *s, int larg) {
     int chars = 0;                                  // quantidade de caracteres visiveis
     for (const char *p = s; *p; p++)                // percorre com ponteiro
@@ -191,7 +212,9 @@ int salvarComTemp(const Produto *lista, int n) {
     return rename(TMP, ARQ) == 0;                   // temporario passa a ser o arquivo oficial
 }
 
+/* ======================== FUNCOES DE APOIO =============================== */
 
+// Gera o proximo ID: maior ID existente + 1 (incremental, sem digitar)
 int proximoId(const Produto *lista, int n) {
     int maior = 0;
     for (int i = 0; i < n; i++)
@@ -200,7 +223,8 @@ int proximoId(const Produto *lista, int n) {
     return maior + 1;
 }
 
-
+// Retorna o indice do produto com esse nome, ou -1 se nao existir
+// 'ignorarId' permite ignorar o proprio produto ao alterar (use 0 na insercao)
 int indicePorNome(const Produto *lista, int n, const char *nome, int ignorarId) {
     for (int i = 0; i < n; i++)
         if (lista[i].id != ignorarId && iguais(lista[i].produto, nome))
@@ -208,6 +232,7 @@ int indicePorNome(const Produto *lista, int n, const char *nome, int ignorarId) 
     return -1;
 }
 
+// Retorna o ponteiro do produto com esse ID, ou NULL se nao achar
 Produto *buscarPorId(Produto *lista, int n, int id) {
     for (int i = 0; i < n; i++)
         if (lista[i].id == id)
@@ -215,14 +240,17 @@ Produto *buscarPorId(Produto *lista, int n, int id) {
     return NULL;
 }
 
-
+// Mostra uma lista de produtos em formato de tabela na tela
 void imprimirTabela(const Produto *lista, int n) {
     printf("\n");
     escreverTabela(stdout, lista, n);               // mesma tabela, so que na tela
     printf("Total: %d produto(s)\n", n);
 }
 
+/* ======================== FUNCOES DO MENU ================================ */
 
+// Chamada no inicio do programa: so AVISA se o produtos.txt nao for encontrado.
+// Os produtos ficam no arquivo separado; o programa apenas le (puxa) esses dados.
 void verificarArquivo(void) {
     FILE *f = fopen(ARQ, "r");                      // tenta abrir para leitura
     if (f == NULL) {                                // nao achou o arquivo
@@ -233,6 +261,7 @@ void verificarArquivo(void) {
     fclose(f);                                      // existe: nada a fazer
 }
 
+// 1) CRIAR: cria um produtos.txt vazio (so com o cabecalho da tabela)
 void criarArquivo(void) {
     char resp[8];
     Produto vazio[1];                               // nenhum produto sera gravado
@@ -251,7 +280,7 @@ void criarArquivo(void) {
         printf("Erro ao criar o arquivo.\n");
 }
 
-
+// 3) INSERIR: cadastra novo produto com ID automatico e sem nome duplicado
 void inserir(Produto *lista, int n) {
     Produto novo;                                   // produto que sera cadastrado
     if (n >= MAX) {                                 // protege o limite do vetor
@@ -284,7 +313,7 @@ void inserir(Produto *lista, int n) {
     imprimirTabela(lista, n + 1);                   // mostra a tabela ja com o novo produto
 }
 
-
+// 4) ALTERAR: muda os dados de um produto (Enter mantem o valor atual)
 void alterar(Produto *lista, int n) {
     char buf[64];
     char *fim;
@@ -381,7 +410,9 @@ void buscar(const Produto *lista, int n) {
         imprimirTabela(achados, qtd);
 }
 
+/* ======================== ORDENACAO (BUBBLE SORT) ======================== */
 
+// Comparadores: retornam >0 se 'a' deve vir DEPOIS de 'b'
 int cmpNomeAZ(const Produto *a, const Produto *b) {
     return strcmp(a->produto, b->produto);          // ordem alfabetica crescente
 }
@@ -395,7 +426,7 @@ int cmpPrecoDesc(const Produto *a, const Produto *b) {
     return cmpPrecoAsc(b, a);
 }
 
-
+// Bubble Sort generico: recebe um PONTEIRO PARA FUNCAO que define o criterio
 void bubbleSort(Produto *v, int n, int (*cmp)(const Produto *, const Produto *)) {
     Produto aux;                                    // auxiliar para a troca
     for (int i = 0; i < n - 1; i++) {               // passadas
@@ -409,7 +440,7 @@ void bubbleSort(Produto *v, int n, int (*cmp)(const Produto *, const Produto *))
     }
 }
 
-
+// 7) ORDENAR: ordena uma COPIA do vetor e exibe (o arquivo nao e alterado)
 void ordenar(const Produto *lista, int n) {
     Produto copia[MAX];                             // copia para nao mexer no original
     int op;
@@ -434,7 +465,7 @@ void ordenar(const Produto *lista, int n) {
     imprimirTabela(copia, n);                       // exibe em formato de tabela
 }
 
-
+// 8) EXPORTAR para CSV (separado por virgula, textos entre aspas)
 void exportarCSV(const Produto *lista, int n) {
     FILE *f = fopen(CSV, "w");
     if (f == NULL) {
@@ -450,6 +481,7 @@ void exportarCSV(const Produto *lista, int n) {
     printf("Dados exportados para '%s'.\n", CSV);
 }
 
+/* ============================== MAIN ===================================== */
 
 int main(void) {
     Produto lista[MAX];                             // vetor de estruturas
@@ -461,6 +493,7 @@ int main(void) {
     do {
         n = carregar(lista);                        // recarrega do arquivo a cada ciclo
         printf("\n===== CADASTRO DA LOJA =====\n");
+        printf("1 - Criar arquivo produtos.txt (vazio)\n");
         printf("2 - Listar produtos\n");
         printf("3 - Inserir produto\n");
         printf("4 - Alterar produto\n");
